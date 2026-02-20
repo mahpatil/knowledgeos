@@ -70,7 +70,7 @@ class Phase1IntegrationTest {
         // 4. Spawn agent
         HttpResponse<AgentResponse> agentResp = client.toBlocking().exchange(
             HttpRequest.POST("/api/v1/projects/" + project.id() + "/agents",
-                new CreateAgentRequest("Implementer", "claude", "Implementer", null, null, ws.id())),
+                new CreateAgentRequest("Implementer", "claude", "Implementer", null, null, ws.id(), null)),
             AgentResponse.class
         );
         AssertionsForClassTypes.assertThat(agentResp.getStatus()).isEqualTo(HttpStatus.CREATED);

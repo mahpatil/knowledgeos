@@ -35,5 +35,10 @@ public record CreateAgentRequest(
 
     @Nullable
     @Schema(description = "Workspace to mount for this agent")
-    java.util.UUID workspaceId
+    java.util.UUID workspaceId,
+
+    @Nullable
+    @Pattern(regexp = "pod|local", message = "agentType must be 'pod' or 'local'")
+    @Schema(description = "Agent type: 'pod' (Kubernetes) or 'local' (Claude Code on host)", allowableValues = {"pod", "local"})
+    String agentType
 ) {}

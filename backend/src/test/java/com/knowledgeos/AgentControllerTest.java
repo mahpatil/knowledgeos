@@ -52,7 +52,7 @@ class AgentControllerTest {
 
     @Test
     void createAgent_validRole_returns201() {
-        var req = new CreateAgentRequest("Claude Implementer", "claude", "Implementer", null, null, null);
+        var req = new CreateAgentRequest("Claude Implementer", "claude", "Implementer", null, null, null, null);
 
         HttpResponse<AgentResponse> response = client.toBlocking().exchange(
             HttpRequest.POST("/api/v1/projects/" + projectId + "/agents", req),
@@ -70,7 +70,7 @@ class AgentControllerTest {
 
     @Test
     void createAgent_invalidRole_returns400() {
-        var req = new CreateAgentRequest("Bad Agent", "claude", "InvalidRole", null, null, null);
+        var req = new CreateAgentRequest("Bad Agent", "claude", "InvalidRole", null, null, null, null);
 
         assertThatThrownBy(() ->
             client.toBlocking().exchange(
@@ -84,7 +84,7 @@ class AgentControllerTest {
 
     @Test
     void createAgent_spawnsKubernetesPod() {
-        var req = new CreateAgentRequest("Architect Agent", "claude", "Architect", null, null, null);
+        var req = new CreateAgentRequest("Architect Agent", "claude", "Architect", null, null, null, null);
 
         client.toBlocking().exchange(
             HttpRequest.POST("/api/v1/projects/" + projectId + "/agents", req),
@@ -97,7 +97,7 @@ class AgentControllerTest {
 
     @Test
     void deleteAgent_stopsPod() {
-        var createReq = new CreateAgentRequest("Temp Agent", "claude", "Tester", null, null, null);
+        var createReq = new CreateAgentRequest("Temp Agent", "claude", "Tester", null, null, null, null);
         HttpResponse<AgentResponse> created = client.toBlocking().exchange(
             HttpRequest.POST("/api/v1/projects/" + projectId + "/agents", createReq),
             AgentResponse.class
@@ -114,7 +114,7 @@ class AgentControllerTest {
 
     @Test
     void stopAgent_gracefulShutdown() {
-        var createReq = new CreateAgentRequest("Running Agent", "claude", "Reviewer", null, null, null);
+        var createReq = new CreateAgentRequest("Running Agent", "claude", "Reviewer", null, null, null, null);
         HttpResponse<AgentResponse> created = client.toBlocking().exchange(
             HttpRequest.POST("/api/v1/projects/" + projectId + "/agents", createReq),
             AgentResponse.class

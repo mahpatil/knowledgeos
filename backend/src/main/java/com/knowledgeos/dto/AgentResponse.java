@@ -14,6 +14,7 @@ public record AgentResponse(
     String model,
     String role,
     String status,
+    String agentType,
     String podName,
     OffsetDateTime createdAt
 ) {}

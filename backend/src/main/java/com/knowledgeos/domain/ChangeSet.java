@@ -1,5 +1,6 @@
 package com.knowledgeos.domain;
 
+import com.knowledgeos.dto.ValidatorResultResponse;
 import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -48,7 +49,11 @@ public class ChangeSet {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "validator_results", columnDefinition = "jsonb")
-    private String validatorResults;
+    private String validatorResultsJson;
+
+    /** Transient DTO — populated by the service layer, not persisted directly. */
+    @Transient
+    private ValidatorResultResponse validatorResults;
 
     @Column(name = "reject_reason", columnDefinition = "TEXT")
     private String rejectReason;
@@ -91,8 +96,11 @@ public class ChangeSet {
     public String getTestsRun() { return testsRun; }
     public void setTestsRun(String testsRun) { this.testsRun = testsRun; }
 
-    public String getValidatorResults() { return validatorResults; }
-    public void setValidatorResults(String validatorResults) { this.validatorResults = validatorResults; }
+    public String getValidatorResultsJson() { return validatorResultsJson; }
+    public void setValidatorResultsJson(String validatorResultsJson) { this.validatorResultsJson = validatorResultsJson; }
+
+    public ValidatorResultResponse getValidatorResults() { return validatorResults; }
+    public void setValidatorResults(ValidatorResultResponse validatorResults) { this.validatorResults = validatorResults; }
 
     public String getRejectReason() { return rejectReason; }
     public void setRejectReason(String rejectReason) { this.rejectReason = rejectReason; }

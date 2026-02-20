@@ -2,6 +2,7 @@ package com.knowledgeos.controller;
 
 import com.knowledgeos.dto.ChangeSetResponse;
 import com.knowledgeos.dto.CreateChangeSetRequest;
+import com.knowledgeos.dto.ValidatorResultResponse;
 import com.knowledgeos.service.ChangeSetService;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.HttpStatus;
@@ -66,5 +67,11 @@ public class ChangeSetController {
     @Operation(summary = "Roll back an applied changeset")
     public HttpResponse<ChangeSetResponse> rollback(UUID id, UUID csid) {
         return HttpResponse.ok(changeSetService.rollback(id, csid));
+    }
+
+    @Post("/{csid}/validate")
+    @Operation(summary = "Manually trigger validation for a changeset")
+    public HttpResponse<ValidatorResultResponse> validate(UUID id, UUID csid) {
+        return HttpResponse.ok(changeSetService.validate(id, csid));
     }
 }

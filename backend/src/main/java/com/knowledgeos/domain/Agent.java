@@ -38,6 +38,9 @@ public class Agent {
     @Column(nullable = false)
     private String status = "pending";
 
+    @Column(name = "agent_type", nullable = false)
+    private String agentType = "pod";
+
     @Column(name = "pod_name")
     private String podName;
 
@@ -77,6 +80,7 @@ public class Agent {
     public String getModel() { return model; }
     public String getRole() { return role; }
     public String getStatus() { return status; }
+    public String getAgentType() { return agentType; }
     public String getPodName() { return podName; }
     public String getPrompt() { return prompt; }
     public String getPermissions() { return permissions; }
@@ -94,6 +98,7 @@ public class Agent {
     public void setModel(String model) { this.model = model; }
     public void setRole(String role) { this.role = role; }
     public void setStatus(String status) { this.status = status; }
+    public void setAgentType(String agentType) { this.agentType = agentType; }
     public void setPodName(String podName) { this.podName = podName; }
     public void setPrompt(String prompt) { this.prompt = prompt; }
     public void setPermissions(String permissions) { this.permissions = permissions; }

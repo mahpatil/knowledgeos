@@ -10,5 +10,6 @@ import java.util.List;
 public record ValidatorResultResponse(
     boolean passed,
     List<String> failures,
-    long durationMs
+    long durationMs,
+    boolean requiresHumanReview
 ) {}

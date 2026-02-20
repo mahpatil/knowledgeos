@@ -11,6 +11,7 @@ import com.knowledgeos.repository.AgentRepository;
 import com.knowledgeos.repository.ChangeSetRepository;
 import com.knowledgeos.repository.FileLockRepository;
 import com.knowledgeos.repository.ProjectRepository;
+import com.knowledgeos.service.validator.ValidatorFactory;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpStatus;
 import io.micronaut.http.exceptions.HttpStatusException;
@@ -53,6 +54,7 @@ public class ChangeSetService {
     @Inject FileLockRepository fileLockRepository;
     @Inject ProjectRepository projectRepository;
     @Inject AgentRepository agentRepository;
+    @Inject ValidatorFactory validatorFactory;
 
     @Value("${kubernetes.workspace-base-path:/workspaces}")
     String workspaceBasePath;
@@ -103,9 +105,17 @@ public class ChangeSetService {
                 cs = changeSetRepository.update(cs);
             }
             case "on_tests_pass" -> {
-                // In a full implementation, run the validator here.
-                // For now, fall through to agent_review.
-                cs.setStatus("agent_review");
+                String workspacePath = workspaceBasePath + "/" + project.getNamespace();
+                ValidatorResultResponse validatorResult = runValidator(cs, agent, workspacePath);
+                cs.setValidatorResults(validatorResult);
+                if (validatorResult.passed() && !validatorResult.requiresHumanReview()) {
+                    applyDiff(cs, project);
+                    cs.setStatus("auto_applied");
+                } else if (validatorResult.passed() && validatorResult.requiresHumanReview()) {
+                    cs.setStatus("human_review");
+                } else {
+                    cs.setStatus("agent_review");
+                }
                 cs = changeSetRepository.update(cs);
             }
             default -> {  // "never"
@@ -198,6 +208,19 @@ public class ChangeSetService {
         return toResponse(cs);
     }
 
+    /**
+     * Manually trigger validation for a changeset (callable from the API).
+     */
+    @Transactional
+    public ValidatorResultResponse validate(UUID projectId, UUID csId) {
+        ChangeSet cs = getEntity(projectId, csId);
+        String workspacePath = workspaceBasePath + "/" + cs.getProject().getNamespace();
+        ValidatorResultResponse result = runValidator(cs, cs.getAgent(), workspacePath);
+        cs.setValidatorResults(result);
+        changeSetRepository.update(cs);
+        return result;
+    }
+
     // ── Private helpers ────────────────────────────────────────────────────
 
     private ChangeSet getEntity(UUID projectId, UUID csId) {
@@ -205,6 +228,16 @@ public class ChangeSetService {
             .filter(cs -> cs.getProject().getId().equals(projectId))
             .orElseThrow(() -> new HttpStatusException(HttpStatus.NOT_FOUND,
                 "ChangeSet not found: " + csId));
+    }
+
+    private ValidatorResultResponse runValidator(ChangeSet cs, Agent agent, String workspacePath) {
+        try {
+            return validatorFactory.forProject(cs.getProject()).run(cs, agent, workspacePath);
+        } catch (Exception e) {
+            log.warn("Validator failed for changeset {}: {}", cs.getId(), e.getMessage());
+            return new ValidatorResultResponse(false,
+                List.of("Validator error: " + e.getMessage()), 0, false);
+        }
     }
 
     /**
@@ -339,7 +372,7 @@ public class ChangeSetService {
             fromJsonArray(cs.getFilesChanged()),
             cs.getDiff(),
             cs.getStatus(),
-            null,  // validatorResults — Phase 3
+            cs.getValidatorResults(),
             cs.getCreatedAt()
         );
     }

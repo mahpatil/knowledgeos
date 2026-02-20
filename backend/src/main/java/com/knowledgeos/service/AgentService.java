@@ -43,6 +43,7 @@ public class AgentService {
         agent.setModel(req.model());
         agent.setRole(req.role());
         agent.setStatus("pending");
+        agent.setAgentType(req.agentType() != null ? req.agentType() : "pod");
 
         if (req.prompt() != null) {
             agent.setPrompt(req.prompt());
@@ -60,15 +61,21 @@ public class AgentService {
 
         agentRepository.save(agent);
 
-        // Spawn the pod (failures are logged — pod status tracked separately)
+        // Spawn pod only for pod-type agents (local agents run on the developer machine)
         final Workspace finalWs = workspace;
-        try {
-            String podName = podManager.spawnPod(agent, project.getNamespace(), finalWs);
-            agent.setPodName(podName);
+        if (!"local".equals(agent.getAgentType())) {
+            try {
+                String podName = podManager.spawnPod(agent, project.getNamespace(), finalWs);
+                agent.setPodName(podName);
+                agent.setStatus("running");
+                agentRepository.update(agent);
+            } catch (Exception e) {
+                log.warn("Pod spawn failed for agent {} — status remains pending: {}", agent.getId(), e.getMessage());
+            }
+        } else {
+            // Local agents are immediately "running" (managed externally by Claude Code)
             agent.setStatus("running");
             agentRepository.update(agent);
-        } catch (Exception e) {
-            log.warn("Pod spawn failed for agent {} — status remains pending: {}", agent.getId(), e.getMessage());
         }
 
         log.info("Agent created: id={} name={} pod={}", agent.getId(), agent.getName(), agent.getPodName());
@@ -170,6 +177,7 @@ public class AgentService {
             a.getModel(),
             a.getRole(),
             a.getStatus(),
+            a.getAgentType(),
             a.getPodName(),
             a.getCreatedAt()
         );

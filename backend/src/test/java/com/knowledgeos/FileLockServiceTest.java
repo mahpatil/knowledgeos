@@ -53,7 +53,7 @@ class FileLockServiceTest {
 
         HttpResponse<AgentResponse> agentResp = client.toBlocking().exchange(
             HttpRequest.POST("/api/v1/projects/" + projectId + "/agents",
-                new CreateAgentRequest("Lock Agent", "claude", "Implementer", null, null, null)),
+                new CreateAgentRequest("Lock Agent", "claude", "Implementer", null, null, null, null)),
             AgentResponse.class
         );
         agentId = agentResp.getBody().get().id();
