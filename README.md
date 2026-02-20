@@ -94,7 +94,7 @@ java kos.java cluster-down              # Delete cluster
 java kos.java agent-image               # Build agent-runner Docker image
 java kos.java agent-image --tag=my:tag  # Custom tag
 java kos.java load-agent-image          # Load image into kind
-java kos.java create-ai-secret          # Push ANTHROPIC_API_KEY → k8s secret
+java kos.java create-ai-secret          # Push ANTHROPIC_API_KEY → k8s secret (pod agents only)
 ```
 
 ### Environment Variables
@@ -104,7 +104,7 @@ java kos.java create-ai-secret          # Push ANTHROPIC_API_KEY → k8s secret
 | `KOS_API` | `http://localhost:8080` | Backend base URL |
 | `KOS_API_KEY` | `dev-local-key` | API authentication key |
 | `KOS_PROJECT_ID` | — | Project UUID (used by `mcp-start`) |
-| `ANTHROPIC_API_KEY` | — | Required for `create-ai-secret` |
+| `ANTHROPIC_API_KEY` | — | Only needed for `create-ai-secret` (pod agents in k8s — not required for Claude Code / local agents) |
 
 ---
 
@@ -242,6 +242,21 @@ curl -s -X POST http://localhost:8080/api/v1/projects/$PROJECT_ID/memory \
 curl -s "http://localhost:8080/api/v1/projects/$PROJECT_ID/timeline" \
   -H "X-KOS-API-Key: dev-local-key" | jq '[.events[].type]'
 ```
+
+---
+
+## Two Agent Modes
+
+| | **local** (Claude Code) | **pod** (Kubernetes) |
+|---|---|---|
+| Where it runs | Developer machine | k8s container |
+| Auth | Your existing `~/.claude/` credentials | `ANTHROPIC_API_KEY` in k8s secret `ai-api-keys` |
+| How it starts | Opens terminal → `.mcp.json` auto-loads | `AgentPodManager.spawnPod()` via fabric8 |
+| `ANTHROPIC_API_KEY` needed? | **No** | **Yes** (only for k8s) |
+| KOS sees it as | `agentType: local`, no `podName` | `agentType: pod`, has `podName` |
+| Terminal access | Your terminal | WebSocket `/ws/terminal/{projectId}/{agentId}` |
+
+For local development and Claude Code integration you only need `infra-up` + `backend-run`. The k8s stack is for autonomous pod agents running headlessly in production.
 
 ---
 

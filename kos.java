@@ -584,7 +584,7 @@ void printHelp() {
     cmd("agent-image",       "Build agent-runner Docker image");
     cmd("agent-image",       "--tag=name:tag       Custom image tag");
     cmd("load-agent-image",  "Load image into kind cluster");
-    cmd("create-ai-secret",  "Create ai-api-keys secret (needs ANTHROPIC_API_KEY)");
+    cmd("create-ai-secret",  "Push ANTHROPIC_API_KEY → k8s secret (pod agents only, not Claude Code)");
 
     section("Utilities");
     cmd("clean",             "Remove backend build artifacts and mcp-server/dist");
