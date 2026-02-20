@@ -26,14 +26,10 @@ public class AgentService {
 
     private static final Logger log = LoggerFactory.getLogger(AgentService.class);
 
-    @Inject
-    AgentRepository agentRepository;
-
-    @Inject
-    WorkspaceRepository workspaceRepository;
-
-    @Inject
-    AgentPodManager podManager;
+    @Inject AgentRepository agentRepository;
+    @Inject WorkspaceRepository workspaceRepository;
+    @Inject AgentPodManager podManager;
+    @Inject TimelineService timelineService;
 
     @Transactional
     public AgentResponse create(Project project, CreateAgentRequest req) {
@@ -77,6 +73,10 @@ public class AgentService {
             agent.setStatus("running");
             agentRepository.update(agent);
         }
+
+        timelineService.log(project.getId(), agent.getId(), "agent_created",
+            java.util.Map.of("name", agent.getName(), "role", agent.getRole(),
+                             "agentType", agent.getAgentType()));
 
         log.info("Agent created: id={} name={} pod={}", agent.getId(), agent.getName(), agent.getPodName());
         return toResponse(agent);
@@ -136,6 +136,8 @@ public class AgentService {
         }
         agent.setStatus("stopped");
         agentRepository.update(agent);
+        timelineService.log(agent.getProject().getId(), agentId, "agent_stopped",
+            java.util.Map.of("name", agent.getName()));
         return toResponse(agent);
     }
 
@@ -160,6 +162,8 @@ public class AgentService {
             log.warn("Pod restart failed: {}", e.getMessage());
         }
         agentRepository.update(agent);
+        timelineService.log(agent.getProject().getId(), agentId, "agent_restarted",
+            java.util.Map.of("name", agent.getName()));
         return toResponse(agent);
     }
 

@@ -44,3 +44,7 @@ kubernetes:
 micronaut:
   server:
     port: -1    # random port per test run
+
+app:
+  # Disable API key auth in tests — existing HTTP client calls don't send headers
+  api-key: ""

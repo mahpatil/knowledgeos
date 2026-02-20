@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "knowledgeos": {
+      "command": "node",
+      "args": ["./mcp-server/dist/index.js"],
+      "env": {
+        "KOS_API": "http://localhost:8080",
+        "KOS_API_KEY": "dev-local-key",
+        "KOS_PROJECT_ID": ""
+      }
+    }
+  }
+}

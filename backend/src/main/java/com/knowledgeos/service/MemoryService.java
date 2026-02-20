@@ -31,6 +31,7 @@ public class MemoryService {
     @Inject MemoryRepository memoryRepository;
     @Inject ProjectRepository projectRepository;
     @Inject QdrantMemoryStore qdrantStore;
+    @Inject TimelineService timelineService;
 
     @Transactional
     public MemoryResponse write(UUID projectId, CreateMemoryRequest req) {
@@ -71,6 +72,8 @@ public class MemoryService {
                    "scopeKey", req.scopeKey() != null ? req.scopeKey() : ""));
 
         log.info("Memory written: id={} layer={} project={}", entry.getId(), req.layer(), projectId);
+        timelineService.log(projectId, null, "memory_written",
+            Map.of("memoryId", entry.getId().toString(), "layer", req.layer(), "title", req.title()));
         return toResponse(entry);
     }
 
@@ -93,6 +96,8 @@ public class MemoryService {
         }
         memoryRepository.delete(entry);
         log.info("Memory deleted: id={} project={}", memId, projectId);
+        timelineService.log(projectId, null, "memory_deleted",
+            Map.of("memoryId", memId.toString()), "user");
     }
 
     public List<MemoryResponse> search(UUID projectId, MemorySearchRequest req) {

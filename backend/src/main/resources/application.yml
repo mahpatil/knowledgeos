@@ -60,6 +60,10 @@ kubernetes:
   workspace-base-path: /workspaces
 
 app:
+  # API key for MCP server and Claude Code integration.
+  # Override with KOS_API_KEY env var in production.
+  api-key: ${KOS_API_KEY:dev-local-key}
+
   cost:
     claude-opus-4-6:
       input-per-1m: 15.0

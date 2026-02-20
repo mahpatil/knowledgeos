@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -38,6 +39,7 @@ public class FileLockService {
     @Inject FileLockRepository fileLockRepository;
     @Inject ProjectRepository projectRepository;
     @Inject AgentRepository agentRepository;
+    @Inject TimelineService timelineService;
 
     @Transactional
     public FileLockResponse acquire(UUID projectId, AcquireLockRequest req) {
@@ -72,6 +74,9 @@ public class FileLockService {
         lock = fileLockRepository.save(lock);
         log.info("Lock acquired: id={} file={} type={} expires={}", lock.getId(), req.filePath(), lockType, lock.getExpiresAt());
 
+        timelineService.log(projectId, req.agentId(), "lock_acquired",
+            Map.of("lockId", lock.getId().toString(), "filePath", req.filePath(), "lockType", lockType));
+
         return toResponse(lock);
     }
 
@@ -90,6 +95,8 @@ public class FileLockService {
 
         fileLockRepository.delete(lock);
         log.info("Lock released: id={} file={}", lockId, lock.getFilePath());
+        timelineService.log(projectId, null, "lock_released",
+            Map.of("lockId", lockId.toString(), "filePath", lock.getFilePath()), "user");
     }
 
     @Transactional

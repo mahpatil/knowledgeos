@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -55,6 +56,7 @@ public class ChangeSetService {
     @Inject ProjectRepository projectRepository;
     @Inject AgentRepository agentRepository;
     @Inject ValidatorFactory validatorFactory;
+    @Inject TimelineService timelineService;
 
     @Value("${kubernetes.workspace-base-path:/workspaces}")
     String workspaceBasePath;
@@ -124,6 +126,10 @@ public class ChangeSetService {
             }
         }
 
+        timelineService.log(projectId, req.agentId(), "changeset_submitted",
+            Map.of("changesetId", cs.getId().toString(), "intent", cs.getIntent(),
+                   "status", cs.getStatus(), "policy", cs.getAutoApplyPolicy()));
+
         log.info("ChangeSet submitted: id={} status={} intent={}", cs.getId(), cs.getStatus(), cs.getIntent());
         return toResponse(cs);
     }
@@ -155,6 +161,8 @@ public class ChangeSetService {
         cs.setStatus("approved");
         cs.setUpdatedAt(OffsetDateTime.now());
         cs = changeSetRepository.update(cs);
+        timelineService.log(projectId, null, "changeset_approved",
+            Map.of("changesetId", csId.toString(), "intent", cs.getIntent()), "user");
         log.info("ChangeSet approved: id={}", csId);
         return toResponse(cs);
     }
@@ -166,6 +174,8 @@ public class ChangeSetService {
         cs.setRejectReason(reason);
         cs.setUpdatedAt(OffsetDateTime.now());
         cs = changeSetRepository.update(cs);
+        timelineService.log(projectId, null, "changeset_rejected",
+            Map.of("changesetId", csId.toString(), "reason", reason != null ? reason : ""), "user");
         log.info("ChangeSet rejected: id={} reason={}", csId, reason);
         return toResponse(cs);
     }
@@ -183,6 +193,8 @@ public class ChangeSetService {
         cs.setStatus("applied");
         cs.setUpdatedAt(OffsetDateTime.now());
         cs = changeSetRepository.update(cs);
+        timelineService.log(projectId, null, "changeset_applied",
+            Map.of("changesetId", csId.toString(), "intent", cs.getIntent()), "user");
         log.info("ChangeSet applied: id={}", csId);
         return toResponse(cs);
     }
@@ -204,6 +216,8 @@ public class ChangeSetService {
         cs.setStatus("rolled_back");
         cs.setUpdatedAt(OffsetDateTime.now());
         cs = changeSetRepository.update(cs);
+        timelineService.log(projectId, null, "changeset_rolled_back",
+            Map.of("changesetId", csId.toString()), "user");
         log.info("ChangeSet rolled back: id={}", csId);
         return toResponse(cs);
     }
