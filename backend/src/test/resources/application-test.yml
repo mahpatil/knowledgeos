@@ -1,0 +1,46 @@
+# Test configuration — uses the local Docker Compose postgres (knowledgeos-postgres:5432)
+# Run: docker compose -f docker-compose.infra.yml up -d postgres
+# before running tests. This avoids Testcontainers/Docker API version issues.
+
+datasources:
+  default:
+    url: jdbc:postgresql://localhost:5432/knowledgeos
+    username: knowledgeos
+    password: knowledgeos
+    driver-class-name: org.postgresql.Driver
+
+jpa:
+  default:
+    properties:
+      hibernate:
+        hbm2ddl:
+          auto: validate
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        show_sql: false
+
+flyway:
+  datasources:
+    default:
+      enabled: true
+      locations: classpath:db/migration
+      clean-on-validation-error: true
+
+redis:
+  uri: redis://localhost:6379
+
+qdrant:
+  host: localhost
+  port: 6333
+  collection: knowledgeos-memory-test
+  vector-size: 1536
+
+kubernetes:
+  backend-url: http://localhost:8080
+  agent-image: knowledgeos/agent-runner:latest
+  system-namespace: knowledgeos-system
+  ai-secret-name: ai-api-keys
+  workspace-base-path: /tmp/test-workspaces
+
+micronaut:
+  server:
+    port: -1    # random port per test run

@@ -1,0 +1,68 @@
+# Agent Pod template — filled by AgentPodManager via fabric8 before apply.
+# Placeholder tokens:  {{NAMESPACE}} {{POD_NAME}} {{AGENT_ID}} {{AGENT_ROLE}}
+#                      {{MODEL}} {{WORKSPACE_PVC}} {{WORKSPACE_PATH}}
+#                      {{PROJECT_ID}} {{BACKEND_URL}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{POD_NAME}}"
+  namespace: "{{NAMESPACE}}"
+  labels:
+    role: agent
+    agentId: "{{AGENT_ID}}"
+    agentRole: "{{AGENT_ROLE}}"
+    model: "{{MODEL}}"
+    projectId: "{{PROJECT_ID}}"
+  annotations:
+    knowledgeos.io/agent-id: "{{AGENT_ID}}"
+    knowledgeos.io/project-id: "{{PROJECT_ID}}"
+spec:
+  serviceAccountName: agent
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  containers:
+    - name: agent
+      image: knowledgeos/agent-runner:latest
+      imagePullPolicy: IfNotPresent
+      env:
+        - name: AGENT_ID
+          value: "{{AGENT_ID}}"
+        - name: AGENT_ROLE
+          value: "{{AGENT_ROLE}}"
+        - name: MODEL
+          value: "{{MODEL}}"
+        - name: PROJECT_ID
+          value: "{{PROJECT_ID}}"
+        - name: BACKEND_URL
+          value: "{{BACKEND_URL}}"
+        - name: WORKSPACE_PATH
+          value: "{{WORKSPACE_PATH}}"
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-api-keys
+              key: ANTHROPIC_API_KEY
+              optional: true
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-api-keys
+              key: OPENAI_API_KEY
+              optional: true
+      volumeMounts:
+        - name: workspace
+          mountPath: "{{WORKSPACE_PATH}}"
+      resources:
+        requests:
+          cpu: "250m"
+          memory: "512Mi"
+        limits:
+          cpu: "2000m"
+          memory: "4Gi"
+  volumes:
+    - name: workspace
+      persistentVolumeClaim:
+        claimName: "{{WORKSPACE_PVC}}"

@@ -1,0 +1,72 @@
+micronaut:
+  application:
+    name: knowledgeos-backend
+  server:
+    port: 8080
+  router:
+    static-resources:
+      swagger-ui:
+        paths: classpath:META-INF/swagger/views/swagger-ui
+        mapping: /swagger-ui/**
+
+datasources:
+  default:
+    url: jdbc:postgresql://localhost:5432/knowledgeos
+    username: knowledgeos
+    password: knowledgeos
+    driver-class-name: org.postgresql.Driver
+
+jpa:
+  default:
+    properties:
+      hibernate:
+        hbm2ddl:
+          auto: validate
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        show_sql: false
+
+flyway:
+  datasources:
+    default:
+      enabled: true
+      locations: classpath:db/migration
+
+redis:
+  uri: redis://localhost:6379
+
+swagger-ui:
+  enabled: true
+  path: /swagger-ui
+
+micronaut:
+  openapi:
+    views:
+      spec: true
+      swagger-ui:
+        enabled: true
+        theme: MATERIAL
+
+qdrant:
+  host: localhost
+  port: 6333
+  collection: knowledgeos-memory
+  vector-size: 1536
+
+kubernetes:
+  backend-url: http://knowledgeos-backend.knowledgeos-system.svc.cluster.local:8080
+  agent-image: knowledgeos/agent-runner:latest
+  system-namespace: knowledgeos-system
+  ai-secret-name: ai-api-keys
+  workspace-base-path: /workspaces
+
+app:
+  cost:
+    claude-opus-4-6:
+      input-per-1m: 15.0
+      output-per-1m: 75.0
+    claude-sonnet-4-6:
+      input-per-1m: 3.0
+      output-per-1m: 15.0
+    codex:
+      input-per-1m: 5.0
+      output-per-1m: 15.0

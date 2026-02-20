@@ -1,0 +1,1087 @@
+openapi: 3.0.3
+info:
+  title: Knowledge OS API
+  version: 1.0.0
+  description: |
+    MCP Platform — project-centric knowledge-work operating system.
+    Multiple AI agents (Claude, Codex) safely collaborate on shared workspaces
+    backed by Kubernetes PVCs.
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+
+tags:
+  - name: projects
+    description: Project lifecycle management
+  - name: workspaces
+    description: Workspace provisioning (PVC-backed)
+  - name: agents
+    description: Agent pod management
+  - name: changesets
+    description: Change submission and approval workflow
+  - name: memory
+    description: Canonical / feature / scratch memory store (Qdrant-backed)
+  - name: locks
+    description: File-level lock management
+  - name: timeline
+    description: Immutable event timeline with replay
+  - name: costs
+    description: Token usage and cost tracking
+
+paths:
+  # ── Projects ──────────────────────────────────────────────────────────────────
+  /projects:
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create a new project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List all projects
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectResponse'
+
+  /projects/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get project by ID
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Archive project (soft delete)
+      responses:
+        '204':
+          description: Project archived
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Workspaces ────────────────────────────────────────────────────────────────
+  /projects/{id}/workspaces:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      operationId: createWorkspace
+      tags: [workspaces]
+      summary: Create a workspace (provisions PVC + directory tree)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+      responses:
+        '201':
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      operationId: listWorkspaces
+      tags: [workspaces]
+      summary: List project workspaces
+      responses:
+        '200':
+          description: List of workspaces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkspaceResponse'
+
+  /projects/{id}/workspaces/{wid}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - name: wid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getWorkspace
+      tags: [workspaces]
+      summary: Get workspace details
+      responses:
+        '200':
+          description: Workspace details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ── Agents ────────────────────────────────────────────────────────────────────
+  /projects/{id}/agents:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      operationId: createAgent
+      tags: [agents]
+      summary: Spawn an agent pod
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRequest'
+      responses:
+        '201':
+          description: Agent pod spawned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      operationId: listAgents
+      tags: [agents]
+      summary: List agents for project
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgentResponse'
+
+  /projects/{id}/agents/{aid}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/AgentId'
+    get:
+      operationId: getAgent
+      tags: [agents]
+      summary: Get agent details
+      responses:
+        '200':
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: updateAgent
+      tags: [agents]
+      summary: Update agent configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAgentRequest'
+      responses:
+        '200':
+          description: Updated agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+    delete:
+      operationId: deleteAgent
+      tags: [agents]
+      summary: Delete agent and stop pod
+      responses:
+        '204':
+          description: Agent deleted
+
+  /projects/{id}/agents/{aid}/stop:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/AgentId'
+    post:
+      operationId: stopAgent
+      tags: [agents]
+      summary: Gracefully stop agent pod
+      responses:
+        '200':
+          description: Agent stopped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+
+  /projects/{id}/agents/{aid}/restart:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/AgentId'
+    post:
+      operationId: restartAgent
+      tags: [agents]
+      summary: Restart agent pod
+      responses:
+        '200':
+          description: Agent restarted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+
+  # ── ChangeSets ────────────────────────────────────────────────────────────────
+  /projects/{id}/changesets:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      operationId: submitChangeSet
+      tags: [changesets]
+      summary: Submit a changeset (acquires file locks, evaluates policy)
+      description: |
+        Status flow: pending → auto_applied | agent_review | human_review
+        → approved | rejected → rolled_back
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChangeSetRequest'
+      responses:
+        '201':
+          description: ChangeSet submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeSetResponse'
+        '409':
+          description: Conflicting file lock
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      operationId: listChangeSets
+      tags: [changesets]
+      summary: List changesets for project
+      responses:
+        '200':
+          description: List of changesets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ChangeSetResponse'
+
+  /projects/{id}/changesets/{csid}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/ChangeSetId'
+    delete:
+      operationId: deleteChangeSet
+      tags: [changesets]
+      summary: Delete a pending changeset
+      responses:
+        '204':
+          description: Deleted
+
+  /projects/{id}/changesets/{csid}/approve:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/ChangeSetId'
+    put:
+      operationId: approveChangeSet
+      tags: [changesets]
+      summary: Approve a changeset for application
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeSetResponse'
+
+  /projects/{id}/changesets/{csid}/reject:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/ChangeSetId'
+    put:
+      operationId: rejectChangeSet
+      tags: [changesets]
+      summary: Reject a changeset
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeSetResponse'
+
+  /projects/{id}/changesets/{csid}/apply:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/ChangeSetId'
+    put:
+      operationId: applyChangeSet
+      tags: [changesets]
+      summary: Apply an approved changeset to workspace files
+      responses:
+        '200':
+          description: Applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeSetResponse'
+
+  /projects/{id}/changesets/{csid}/rollback:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - $ref: '#/components/parameters/ChangeSetId'
+    put:
+      operationId: rollbackChangeSet
+      tags: [changesets]
+      summary: Roll back an applied changeset using stored reverse diff
+      responses:
+        '200':
+          description: Rolled back
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChangeSetResponse'
+
+  # ── Memory ────────────────────────────────────────────────────────────────────
+  /projects/{id}/memory:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      operationId: writeMemory
+      tags: [memory]
+      summary: Write a memory entry (canonical / feature / scratch)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMemoryRequest'
+      responses:
+        '201':
+          description: Memory entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      operationId: listMemory
+      tags: [memory]
+      summary: List memory entries
+      parameters:
+        - name: layer
+          in: query
+          schema:
+            type: string
+            enum: [canonical, feature, scratch]
+      responses:
+        '200':
+          description: Memory entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MemoryResponse'
+
+  /projects/{id}/memory/{mid}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - name: mid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: deleteMemory
+      tags: [memory]
+      summary: Delete a memory entry
+      responses:
+        '204':
+          description: Deleted
+
+  /projects/{id}/memory/search:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      operationId: searchMemory
+      tags: [memory]
+      summary: Semantic search memory entries via Qdrant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemorySearchRequest'
+      responses:
+        '200':
+          description: Ranked results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MemoryResponse'
+
+  # ── Locks ─────────────────────────────────────────────────────────────────────
+  /projects/{id}/locks:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      operationId: acquireLock
+      tags: [locks]
+      summary: Acquire a file lock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcquireLockRequest'
+      responses:
+        '201':
+          description: Lock acquired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileLockResponse'
+        '409':
+          description: Conflicting lock exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      operationId: listLocks
+      tags: [locks]
+      summary: List active file locks
+      responses:
+        '200':
+          description: Active locks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FileLockResponse'
+
+  /projects/{id}/locks/{lockId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - name: lockId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      operationId: releaseLock
+      tags: [locks]
+      summary: Release a file lock
+      responses:
+        '204':
+          description: Lock released
+
+  /projects/{id}/locks/{lockId}/reclaim:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - name: lockId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: reclaimLock
+      tags: [locks]
+      summary: Force-reclaim an expired or stale lock
+      responses:
+        '200':
+          description: Lock reclaimed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileLockResponse'
+
+  # ── Timeline ──────────────────────────────────────────────────────────────────
+  /projects/{id}/timeline:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      operationId: listTimeline
+      tags: [timeline]
+      summary: List timeline events (cursor-paginated)
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: agentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Timeline events page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelinePage'
+
+  /projects/{id}/timeline/{eid}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - name: eid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getTimelineEvent
+      tags: [timeline]
+      summary: Get a specific timeline event
+      responses:
+        '200':
+          description: Timeline event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineEventResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /projects/{id}/timeline/{eid}/replay:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+      - name: eid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: replayTimelineEvent
+      tags: [timeline]
+      summary: Replay a reversible timeline event
+      responses:
+        '200':
+          description: Replay initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineEventResponse'
+
+  /projects/{id}/cost-summary:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      operationId: getCostSummary
+      tags: [costs]
+      summary: Get cost summary per agent and total
+      responses:
+        '200':
+          description: Cost summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CostSummaryResponse'
+
+components:
+  parameters:
+    ProjectId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AgentId:
+      name: aid
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ChangeSetId:
+      name: csid
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ── Projects ──────────────────────────────────────────────────────────────
+    CreateProjectRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          enum: [software, content, marketing, migration, research]
+        templateHint:
+          type: string
+
+    UpdateProjectRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, paused, archived]
+
+    ProjectResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+        namespace:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── Workspaces ────────────────────────────────────────────────────────────
+    CreateWorkspaceRequest:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          enum: [code, content, legacy, target, mapping]
+        mode:
+          type: string
+          enum: [read-write, read-only]
+          default: read-write
+
+    WorkspaceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+        mode:
+          type: string
+        path:
+          type: string
+        pvcName:
+          type: string
+        fileTree:
+          type: array
+          items:
+            type: string
+
+    # ── Agents ────────────────────────────────────────────────────────────────
+    CreateAgentRequest:
+      type: object
+      required: [name, model, role]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        model:
+          type: string
+          enum: [claude, codex]
+        role:
+          type: string
+          enum: [Architect, Implementer, Reviewer, Tester, Debugger, Refactorer,
+                 DocumentationWriter, ReverseEngineer, DomainModeler, Translator, Verifier]
+        permissions:
+          type: object
+          description: '{"read": [], "write": [], "execute": false}'
+        prompt:
+          type: string
+        workspaceId:
+          type: string
+          format: uuid
+
+    UpdateAgentRequest:
+      type: object
+      properties:
+        permissions:
+          type: object
+        prompt:
+          type: string
+
+    AgentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        model:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, stopped, failed, terminated]
+        podName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── ChangeSets ────────────────────────────────────────────────────────────
+    CreateChangeSetRequest:
+      type: object
+      required: [intent, filesChanged, diff]
+      properties:
+        intent:
+          type: string
+          minLength: 1
+        filesChanged:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        diff:
+          type: string
+          minLength: 1
+        testsRun:
+          type: array
+          items:
+            type: string
+        autoApplyPolicy:
+          type: string
+          enum: [always, on_tests_pass, never]
+          default: never
+
+    ChangeSetResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        agentId:
+          type: string
+          format: uuid
+        intent:
+          type: string
+        filesChanged:
+          type: array
+          items:
+            type: string
+        diff:
+          type: string
+        status:
+          type: string
+          enum: [pending, auto_applied, agent_review, human_review, approved, rejected, rolled_back]
+        validatorResults:
+          $ref: '#/components/schemas/ValidatorResultResponse'
+        createdAt:
+          type: string
+          format: date-time
+
+    ValidatorResultResponse:
+      type: object
+      properties:
+        passed:
+          type: boolean
+        failures:
+          type: array
+          items:
+            type: string
+        durationMs:
+          type: integer
+
+    # ── Memory ────────────────────────────────────────────────────────────────
+    CreateMemoryRequest:
+      type: object
+      required: [title, content, justification, layer]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        content:
+          type: string
+          minLength: 1
+        justification:
+          type: string
+          minLength: 1
+        layer:
+          type: string
+          enum: [canonical, feature, scratch]
+        scopeKey:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    MemorySearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+        layer:
+          type: string
+          enum: [canonical, feature, scratch]
+        limit:
+          type: integer
+          default: 10
+          maximum: 50
+
+    MemoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        content:
+          type: string
+        justification:
+          type: string
+        layer:
+          type: string
+        scopeKey:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        score:
+          type: number
+          description: Semantic similarity score (search results only)
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    # ── Locks ─────────────────────────────────────────────────────────────────
+    AcquireLockRequest:
+      type: object
+      required: [filePath]
+      properties:
+        filePath:
+          type: string
+          minLength: 1
+        lockType:
+          type: string
+          enum: [read, write]
+          default: write
+        durationSeconds:
+          type: integer
+          default: 300
+          maximum: 3600
+
+    FileLockResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filePath:
+          type: string
+        lockType:
+          type: string
+        lockedBy:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── Timeline ──────────────────────────────────────────────────────────────
+    TimelineEventResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [project_created, workspace_created, agent_spawned, agent_stopped,
+                 changeset_submitted, changeset_approved, changeset_rejected,
+                 changeset_applied, changeset_rolled_back, lock_acquired, lock_released,
+                 memory_written, memory_deleted, validator_run, terminal_input,
+                 pod_started, pod_stopped, cost_recorded, namespace_provisioned,
+                 verification_complete]
+        payload:
+          type: object
+        reversible:
+          type: boolean
+        replayCmd:
+          type: string
+        agentId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    TimelinePage:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimelineEventResponse'
+        nextCursor:
+          type: string
+        hasMore:
+          type: boolean
+
+    # ── Costs ─────────────────────────────────────────────────────────────────
+    CostSummaryResponse:
+      type: object
+      properties:
+        projectId:
+          type: string
+          format: uuid
+        totalUsd:
+          type: number
+        perAgent:
+          type: array
+          items:
+            type: object
+            properties:
+              agentId:
+                type: string
+                format: uuid
+              agentName:
+                type: string
+              model:
+                type: string
+              inputTokens:
+                type: integer
+              outputTokens:
+                type: integer
+              costUsd:
+                type: number
+
+    # ── Shared ────────────────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object

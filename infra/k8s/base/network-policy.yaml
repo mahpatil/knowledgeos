@@ -1,0 +1,43 @@
+# NetworkPolicy template — NamespaceManager applies a copy to each project namespace.
+# Agents can only reach the knowledgeos-system namespace (for backend APIs)
+# and the internet (for AI APIs). They cannot reach other project namespaces.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-isolation
+  namespace: knowledgeos-system   # template — NamespaceManager copies to project-{id8}
+spec:
+  podSelector:
+    matchLabels:
+      role: agent
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow incoming connections only from knowledgeos-system (backend WebSocket proxy)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: knowledgeos-system
+  egress:
+    # Allow egress to knowledgeos-system (backend REST/WebSocket)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: knowledgeos-system
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Allow outbound HTTPS (AI API calls: Anthropic, OpenAI)
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80

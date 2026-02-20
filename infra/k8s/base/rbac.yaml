@@ -1,0 +1,51 @@
+# RBAC for agent pods in project namespaces.
+# Each project gets its own namespace; the backend service account manages resources
+# across namespaces from knowledgeos-system.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: knowledgeos-backend
+  namespace: knowledgeos-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: knowledgeos-namespace-manager
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "serviceaccounts", "persistentvolumeclaims", "pods", "pods/exec", "pods/log", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: knowledgeos-backend-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: knowledgeos-namespace-manager
+subjects:
+  - kind: ServiceAccount
+    name: knowledgeos-backend
+    namespace: knowledgeos-system
+---
+# Template Role applied inside each project namespace (copied by NamespaceManager)
+# Agents get restricted access — read pods/logs, execute into own pod only.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: agent-role
+  namespace: knowledgeos-system   # template — NamespaceManager copies to project-{id8}
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
